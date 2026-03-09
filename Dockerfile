@@ -19,8 +19,10 @@ RUN pip install --no-cache-dir playwright && \
 COPY nyt-crossword-download/ nyt-crossword-download/
 COPY rmupload/                rmupload/
 COPY entrypoint.sh            entrypoint.sh
+COPY run_job.sh               run_job.sh
+COPY send_email.py            send_email.py
 COPY cron-entry.sh            cron-entry.sh
-RUN chmod +x entrypoint.sh cron-entry.sh
+RUN chmod +x entrypoint.sh run_job.sh cron-entry.sh
 
 # Create puzzles dir (will be overridden by volume mount)
 RUN mkdir -p /app/puzzles
