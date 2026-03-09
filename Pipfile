@@ -5,10 +5,10 @@ name = "pypi"
 
 [packages]
 playwright = "*"
+python-dotenv = "*"
 requests = "*"
 click = "*"
 black = "*"
-python-dotenv = "*"
 
 [dev-packages]
 

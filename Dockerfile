@@ -11,6 +11,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Playwright: install the python package then download Chromium + its OS deps
+RUN pip install --no-cache-dir playwright && \
+    playwright install --with-deps chromium
+
 # Application code
 COPY nyt-crossword-download/ nyt-crossword-download/
 COPY rmupload/                rmupload/
