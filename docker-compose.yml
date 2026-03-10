@@ -9,10 +9,6 @@ services:
       - ./rm_cookies.txt:/app/rm_cookies.txt
     env_file:
       - .env
-    environment:
-      # Set to "1" to run the job immediately on container start
-      # - RUN_NOW=1
-      - RUN_NOW=0
 
 volumes:
   puzzles:
