@@ -44,6 +44,7 @@ mutation GenerateUploadUrl($input: GenerateUploadUrlInput!) {
   generateUploadUrl(input: $input) {
     uploadUrl
     gcsPath
+    uploadToken
     __typename
   }
 }
@@ -158,10 +159,10 @@ def graphql_request(session: requests.Session, operation_name: str, query: str, 
 
 # ─── Step Functions ──────────────────────────────────────────────────────────
 
-def step1_generate_upload_url(session: requests.Session, content_length: int) -> tuple[str, str]:
+def step1_generate_upload_url(session: requests.Session, content_length: int) -> tuple[str, str, str]:
     """
     Step 1: Request a signed upload URL from reMarkable.
-    Returns (upload_url, gcs_path).
+    Returns (upload_url, gcs_path, uploadToken).
     """
     print("Step 1: Requesting upload URL...")
 
@@ -177,11 +178,13 @@ def step1_generate_upload_url(session: requests.Session, content_length: int) ->
 
     upload_url = result["uploadUrl"]
     gcs_path = result["gcsPath"]
+    upload_token = result["uploadToken"]
 
     print(f"  ✓ Got upload URL (expires in ~5 min)")
     print(f"  ✓ GCS path: {gcs_path}")
+    print(f"  ✓ Upload token: {upload_token[:15]}...")
 
-    return upload_url, gcs_path
+    return upload_url, gcs_path, upload_token
 
 
 def step2_upload_file(session: requests.Session, upload_url: str, file_data: bytes) -> None:
@@ -203,7 +206,7 @@ def step2_upload_file(session: requests.Session, upload_url: str, file_data: byt
 
 
 def step3_complete_upload(
-    session: requests.Session, gcs_path: str, file_name: str, parent_id: str = ""
+        session: requests.Session, gcs_path: str, upload_token: str, file_name: str, parent_id: str = ""
 ) -> str:
     """
     Step 3: Tell reMarkable the upload is done.
@@ -217,6 +220,7 @@ def step3_complete_upload(
             "fileName": file_name,
             "contentType": "application/pdf",
             "parentId": parent_id,
+            "uploadToken": upload_token 
         }
     }
 
@@ -264,6 +268,11 @@ def main():
         help="(Step 3 only) Provide the GCS path from step 1.",
     )
     parser.add_argument(
+        "--upload-token",
+        default=None,
+        help="(Step 3 only) Provide the upload token from step 1.",
+    )
+    parser.add_argument(
         "-f",
         "--fetch-cookies",
         action="store_true",
@@ -291,10 +300,11 @@ def main():
 
     # Run steps
     if args.step == 1:
-        upload_url, gcs_path = step1_generate_upload_url(session, len(file_data))
+        upload_url, gcs_path, upload_token  = step1_generate_upload_url(session, len(file_data))
         print(f"\n--- Save these for subsequent steps ---")
         print(f"Upload URL: {upload_url}")
         print(f"GCS Path:   {gcs_path}")
+        print(f"Upload token: {upload_token}")
 
     elif args.step == 2:
         if not args.upload_url:
@@ -306,15 +316,17 @@ def main():
         if not args.gcs_path:
             print("ERROR: --gcs-path is required for --step 3", file=sys.stderr)
             sys.exit(1)
-        step3_complete_upload(session, args.gcs_path, file_name, args.parent_id)
+        if not args.upload_token:
+            print("ERROR: --upload-token is required for --step 3", file=sys.stderr)
+        step3_complete_upload(session, args.gcs_path, upload_token, file_name, args.parent_id)
 
     else:
         # Run all steps
-        upload_url, gcs_path = step1_generate_upload_url(session, len(file_data))
+        upload_url, gcs_path, upload_token = step1_generate_upload_url(session, len(file_data))
         print()
         step2_upload_file(session, upload_url, file_data)
         print()
-        step3_complete_upload(session, gcs_path, file_name, args.parent_id)
+        step3_complete_upload(session, gcs_path, upload_token, file_name, args.parent_id)
 
     print("\nDone!")
 
