@@ -14,5 +14,7 @@ if [[ "${RUN_NOW:-0}" == "1" ]]; then
 fi
 
 # ── Start cron in foreground ──────────────────────────────────────────────
-echo "Starting cron (next run: 01:00 daily)…"
-cron -f
+if [[ "${RUN_NOW:-0}" == "0" ]]; then
+    echo "Starting cron (next run: 01:00 daily)…"
+    cron -f
+fi
